@@ -1,0 +1,158 @@
+schema: '2.0'
+stages:
+  build_manifest@en:
+    cmd: python src/build_manifest.py --lang en
+    deps:
+    - path: data/raw/en/transcripts.tsv
+      hash: md5
+      md5: f8790f09fd60e72aaccadbf7112736a8
+      size: 98
+    - path: data/raw/en/wav
+      hash: md5
+      md5: 8bb347ab9d7fdb52be52b0b354ae1aba.dir
+      size: 192132
+      nfiles: 3
+    - path: src/build_manifest.py
+      hash: md5
+      md5: 52f4e15757635d1a2141f86b36c2b3a4
+      size: 2012
+    params:
+      params.yaml:
+        data.en:
+          raw_dir: data/raw/en/wav
+          transcript_file: data/raw/en/transcripts.tsv
+          manifest_dir: data/manifests/en
+          noisy_dir: data/noisy/en
+          espeak_lang: en-us
+    outs:
+    - path: data/manifests/en/clean.jsonl
+      hash: md5
+      md5: d0e4589e4fe00c35dda351e05de6bdfc
+      size: 707
+  phonemize@en:
+    cmd: python src/phonemize.py --lang en --manifest 
+      data/manifests/en/clean.jsonl --output data/manifests/en/clean_phon.jsonl
+    deps:
+    - path: data/manifests/en/clean.jsonl
+      hash: md5
+      md5: d0e4589e4fe00c35dda351e05de6bdfc
+      size: 707
+    - path: src/phonemize.py
+      hash: md5
+      md5: c3c7496f7b6a8ff81f7815fa78f20108
+      size: 1616
+    params:
+      params.yaml:
+        data.en.espeak_lang: en-us
+    outs:
+    - path: data/manifests/en/clean_phon.jsonl
+      hash: md5
+      md5: de6b6dad4a0207b31e1b603acfceccef
+      size: 811
+  add_noise@en:
+    cmd: python src/add_noise.py --lang en --manifest 
+      data/manifests/en/clean_phon.jsonl --output_dir data/manifests/en/
+    deps:
+    - path: data/manifests/en/clean_phon.jsonl
+      hash: md5
+      md5: de6b6dad4a0207b31e1b603acfceccef
+      size: 811
+    - path: src/add_noise.py
+      hash: md5
+      md5: 815f3b0187613cb7c0301b3d6e213fd3
+      size: 2502
+    - path: src/noise_utils.py
+      hash: md5
+      md5: b54edf58b54cef0275e2cc7e698f0f06
+      size: 881
+    params:
+      params.yaml:
+        data.en.noisy_dir: data/noisy/en
+        seed: 42
+        snr_levels:
+        - -5
+        - 0
+        - 5
+        - 10
+        - 20
+        - 30
+        - 40
+    outs:
+    - path: data/noisy/en/
+      hash: md5
+      md5: 3ba2b7813ef5727009820d2826841bf1.dir
+      size: 1344924
+      nfiles: 21
+  infer@en:
+    cmd: python src/infer.py --manifest_dir data/manifests/en/ --output_dir 
+      data/manifests/en/preds/
+    deps:
+    - path: data/manifests/en/clean_phon.jsonl
+      hash: md5
+      md5: de6b6dad4a0207b31e1b603acfceccef
+      size: 811
+    - path: data/manifests/en/noisy_snr+0.jsonl
+      hash: md5
+      md5: c6bba4efa2bf7f8a57cb0e116f2f25bb
+      size: 979
+    - path: data/manifests/en/noisy_snr+10.jsonl
+      hash: md5
+      md5: b7900cd0419ee98516285c89e265f1b2
+      size: 985
+    - path: data/manifests/en/noisy_snr+20.jsonl
+      hash: md5
+      md5: 7e4f237e3d28b1c059cbea0d47758c35
+      size: 985
+    - path: data/manifests/en/noisy_snr+30.jsonl
+      hash: md5
+      md5: 92e6a678990e386c8feac040e5c54c1f
+      size: 985
+    - path: data/manifests/en/noisy_snr+40.jsonl
+      hash: md5
+      md5: 51652ef3b34ea8936c089409c6679d5d
+      size: 985
+    - path: data/manifests/en/noisy_snr+5.jsonl
+      hash: md5
+      md5: d026c8c5377f704fedf6612c0565be18
+      size: 979
+    - path: data/manifests/en/noisy_snr-5.jsonl
+      hash: md5
+      md5: 60e6e42e910bf2be11479725dfaaa3fa
+      size: 982
+    - path: src/infer.py
+      hash: md5
+      md5: 5c92f8946843f79199f35e51e35dd965
+      size: 2930
+    params:
+      params.yaml:
+        model:
+          name: facebook/wav2vec2-lv-60-espeak-cv-ft
+          sample_rate: 16000
+    outs:
+    - path: data/manifests/en/preds/
+      hash: md5
+      md5: 5978accc1e162548c552074b6a632276.dir
+      size: 8075
+      nfiles: 8
+  evaluate@en:
+    cmd: python src/evaluate.py --manifest_dir data/manifests/en/preds/ --lang         
+      en --metrics      metrics/en.json --figure       figures/per_vs_snr_en.png
+    deps:
+    - path: data/manifests/en/preds/
+      hash: md5
+      md5: 5978accc1e162548c552074b6a632276.dir
+      size: 8075
+      nfiles: 8
+    - path: src/evaluate.py
+      hash: md5
+      md5: ac47a95df79d77a3f61b9e1f109b54fb
+      size: 2730
+    outs:
+    - path: figures/per_vs_snr_en.png
+      hash: md5
+      md5: ce259f5103e81c24c5b94774c0304738
+      size: 15614
+    - path: metrics/en.json
+      hash: md5
+      md5: 9cedc937c5871c5184f39f8f5727463f
+      size: 186

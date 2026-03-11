@@ -1,0 +1,91 @@
+# dvc.yaml
+stages:
+
+  build_manifest:
+    foreach: ${languages}
+    do:
+      cmd: python src/build_manifest.py --lang ${item}
+      deps:
+        - src/build_manifest.py
+        - data/raw/${item}/wav
+        - data/raw/${item}/transcripts.tsv
+      params:
+        - data.${item}
+      outs:
+        - data/manifests/${item}/clean.jsonl
+
+  phonemize:
+    foreach: ${languages}
+    do:
+      cmd: >-
+        python src/phonemize.py
+        --lang ${item}
+        --manifest data/manifests/${item}/clean.jsonl
+        --output   data/manifests/${item}/clean_phon.jsonl
+      deps:
+        - src/phonemize.py
+        - data/manifests/${item}/clean.jsonl
+      params:
+        - data.${item}.espeak_lang
+      outs:
+        - data/manifests/${item}/clean_phon.jsonl
+
+  add_noise:
+    foreach: ${languages}
+    do:
+      cmd: >-
+        python src/add_noise.py
+        --lang ${item}
+        --manifest   data/manifests/${item}/clean_phon.jsonl
+        --output_dir data/manifests/${item}/
+      deps:
+        - src/add_noise.py
+        - src/noise_utils.py
+        - data/manifests/${item}/clean_phon.jsonl
+      params:
+        - snr_levels
+        - seed
+        - data.${item}.noisy_dir
+      outs:
+        - data/noisy/${item}/
+
+  infer:
+    foreach: ${languages}
+    do:
+      cmd: >-
+        python src/infer.py
+        --manifest_dir data/manifests/${item}/
+        --output_dir   data/manifests/${item}/preds/
+      deps:
+        - src/infer.py
+        - data/manifests/${item}/clean_phon.jsonl        # ← specific files, not the whole dir
+        - data/manifests/${item}/noisy_snr-5.jsonl       # ← list each noisy manifest
+        - data/manifests/${item}/noisy_snr+0.jsonl
+        - data/manifests/${item}/noisy_snr+5.jsonl
+        - data/manifests/${item}/noisy_snr+10.jsonl
+        - data/manifests/${item}/noisy_snr+20.jsonl
+        - data/manifests/${item}/noisy_snr+30.jsonl
+        - data/manifests/${item}/noisy_snr+40.jsonl
+      params:
+        - model
+      outs:
+        - data/manifests/${item}/preds/                  # ← separate dir, no conflict
+
+  evaluate:
+    foreach: ${languages}
+    do:
+      cmd: >-
+        python src/evaluate.py
+        --manifest_dir data/manifests/${item}/preds/
+        --lang         ${item}
+        --metrics      metrics/${item}.json
+        --figure       figures/per_vs_snr_${item}.png
+      deps:
+        - src/evaluate.py
+        - data/manifests/${item}/preds/                  # ← reads from preds/, no conflict
+      metrics:
+        - metrics/${item}.json:
+            cache: false
+      plots:
+        - figures/per_vs_snr_${item}.png:
+            cache: false
