@@ -1,0 +1,5 @@
+# .gitignore
+data/raw/
+data/noisy/
+data/manifests/
+figures/
