@@ -89,3 +89,14 @@ stages:
       plots:
         - figures/per_vs_snr_${item}.png:
             cache: false
+  plot_summary:
+    cmd: >-
+      python src/plot_summary.py
+      --metrics_dir metrics/
+      --figure      figures/per_vs_snr_summary.png
+    deps:
+      - src/plot_summary.py
+      - metrics/                 # depends on ALL language metric files
+    plots:
+      - figures/per_vs_snr_summary.png:
+          cache: false

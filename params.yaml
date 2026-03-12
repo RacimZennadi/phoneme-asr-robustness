@@ -1,7 +1,7 @@
 # params.yaml
 languages:
   - en
-
+  - fr
 snr_levels: [-5, 0, 5, 10, 20, 30, 40]
 
 data:
@@ -11,6 +11,12 @@ data:
     manifest_dir: data/manifests/en
     noisy_dir: data/noisy/en
     espeak_lang: en-us
+  fr:            
+    raw_dir: data/raw/fr/wav
+    transcript_file: data/raw/fr/transcripts.tsv
+    manifest_dir: data/manifests/fr
+    noisy_dir: data/noisy/fr
+    espeak_lang: fr-fr
 
 model:
   name: facebook/wav2vec2-lv-60-espeak-cv-ft
